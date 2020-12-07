@@ -28,25 +28,6 @@ blueMissile = pygame.image.load(os.path.join("source", "blueLaser.png"))
 playerShip = pygame.image.load(os.path.join("source", "yellowShip.png"))
 playerMissile = pygame.image.load(os.path.join("source", "yellowLaser.png"))
 
-class Missile:
-    def __init__(self, x, y, image):
-        self.x = x
-        self.y = y
-        self.image = image
-        self.mask = pygame.mask.from_surface(self.image)
-
-    def draw(self, window):
-        window.blit(self.image, (self.x, self.y))
-
-    def shift(self, velocity):
-        self.y += velocity
-
-    def pop(self, height):
-        return not(self.y <= height and self.y >= 0)
-
-    def collision(self, _object):
-        return collide(self, _object)
-
 class Ship:
     cd = 30
 
@@ -64,6 +45,18 @@ class Ship:
         for i in self.missiles:
             i.draw(window)
 
+    def fire(self):
+        if self.cdCounter == 0:
+            missile = Missile(self.x, self.y, self.missileImage)
+            self.missiles.append(missile)
+            self.cdCounter = 1
+
+    def _cd(self):
+        if self.cdCounter >= self.cd:
+            self.cdCounter = 0
+        elif self.cdCounter > 0:
+            self.cdCounter += 1
+
     def shiftMissile(self, velocity, _object):
         self._cd()
         for i in self.missiles:
@@ -73,18 +66,6 @@ class Ship:
             elif i.collision(_object):
                 _object.hp -= 10
                 self.missiles.remove(i)
-
-    def _cd(self):
-        if self.cdCounter >= self.cd:
-            self.cdCounter = 0
-        elif self.cdCounter > 0:
-            self.cdCounter += 1
-
-    def fire(self):
-        if self.cdCounter == 0:
-            missile = Missile(self.x, self.y, self.missileImage)
-            self.missiles.append(missile)
-            self.cdCounter = 1
 
     def getWidth(self):
         return self.shipImage.get_width()
@@ -100,6 +81,10 @@ class Human(Ship):
         self.mask = pygame.mask.from_surface(self.shipImage)
         self.maxHp = hp
 
+    def draw(self, window):
+        super().draw(window)
+        self.healthbar(window)
+
     def shiftMissile(self, velocity, _object):
         self._cd()
         for i in self.missiles:
@@ -112,10 +97,6 @@ class Human(Ship):
                         _object.remove(j)
                         if i in self.missiles:
                             self.missiles.remove(i)
-
-    def draw(self, window):
-        super().draw(window)
-        self.healthbar(window)
 
     def healthbar(self, window):
         pygame.draw.rect(window, (255,0,0), (self.x, self.y + self.shipImage.get_height() + 10, self.shipImage.get_width(), 10))
@@ -142,6 +123,25 @@ class Bot(Ship):
             self.missiles.append(missile)
             self.cdCounter = 1
 
+class Missile:
+    def __init__(self, x, y, image):
+        self.x = x
+        self.y = y
+        self.image = image
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def draw(self, window):
+        window.blit(self.image, (self.x, self.y))
+
+    def shift(self, velocity):
+        self.y += velocity
+
+    def pop(self, height):
+        return not(self.y <= height and self.y >= 0)
+
+    def collision(self, _object):
+        return collide(self, _object)
+
 def collide(obj1, obj2):
     offset_x = obj2.x - obj1.x
     offset_y = obj2.y - obj1.y
@@ -150,7 +150,7 @@ def collide(obj1, obj2):
 def main():
     run = True
     frames = 60
-    stage = 1
+    stage = 0
     tries = 5
     _font = pygame.font.SysFont("timesnewroman", 50)
 
@@ -229,7 +229,12 @@ def main():
                 i.fire()
 
             if collide(i, player):
-                player.hp -= 10
+                if i.shipImage == greenSpaceShip:
+                    player.hp -= 5
+                if i.shipImage == blueSpaceShip:
+                    player.hp -= 10
+                if i.shipImage == redSpaceShip:
+                    player.hp -= 15
                 bots.remove(i)
             elif i.y + i.getHeight() > Height:
                 tries -= 1
